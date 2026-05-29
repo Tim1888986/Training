@@ -2,7 +2,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitiesList = document.getElementById("activities-list");
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
+  const askModeButton = document.getElementById("ask-mode-button");
   const messageDiv = document.getElementById("message");
+
+  let askModeActive = false;
+  let askModeUsed = false;
+
+  function showMessage(text, type) {
+    messageDiv.textContent = text;
+    messageDiv.className = `message ${type}`;
+    messageDiv.classList.remove("hidden");
+  } 
+
+  askModeButton.addEventListener("click", () => {
+    askModeActive = true;
+    askModeUsed = false;
+    askModeButton.textContent = "Ask Mode enabled for first interaction";
+    askModeButton.disabled = true;
+    showMessage("Ask Mode is ready. Your next sign-up will be treated as the first interaction.", "info");
+  });
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -59,12 +77,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        let messageText = result.message;
+
+        if (askModeActive && !askModeUsed) {
+          messageText = `Ask Mode first interaction: ${messageText}`;
+          askModeUsed = true;
+          askModeActive = false;
+          askModeButton.textContent = "Enable Ask Mode for first interaction";
+          askModeButton.disabled = false;
+        }
+
+        messageDiv.textContent = messageText;
+        messageDiv.className = "message success";
         signupForm.reset();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        messageDiv.className = "message error";
+        if (askModeActive && !askModeUsed) {
+          askModeButton.disabled = false;
+        }
       }
 
       messageDiv.classList.remove("hidden");
@@ -75,7 +106,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 5000);
     } catch (error) {
       messageDiv.textContent = "Failed to sign up. Please try again.";
-      messageDiv.className = "error";
+      messageDiv.className = "message error";
+      if (askModeActive && !askModeUsed) {
+        askModeButton.disabled = false;
+      }
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
     }
